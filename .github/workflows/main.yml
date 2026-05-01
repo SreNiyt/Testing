@@ -27,20 +27,13 @@ jobs:
       - name: Prepare Kernel Headers
         run: |
           cd kernel-source
-          # Many MTK trees use the 'vendor' prefix for the defconfig
-          # We check for blossom_defconfig or mt6765_defconfig
-          if [ -f arch/arm64/configs/vendor/blossom_defconfig ]; then
-            CONF=vendor/blossom_defconfig
-          elif [ -f arch/arm64/configs/blossom_defconfig ]; then
-            CONF=blossom_defconfig
-          else
-            # Fallback to the chipset generic
-            CONF=mt6765_defconfig
-          fi
+          # We already know it's blossom_defconfig now
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- blossom_defconfig
           
-          echo "Using Config: $CONF"
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- $CONF
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+          # Replace modules_prepare with 'scripts' and 'prepare'
+          # This builds the internal tools needed for external modules
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- scripts prepare
+
 
       - name: Compile Sashimi Module
         run: |
