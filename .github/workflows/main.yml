@@ -1,4 +1,4 @@
-name: Build Sash Out-of-Tree Module
+name: Build Sashimi Module (In-Tree)
 on: 
   push:
     branches: [ main, master ]
@@ -22,28 +22,28 @@ jobs:
       - name: Install Build Essentials
         run: |
           sudo apt-get update
-          # Install Clang and LLVM alongside the standard tools
           sudo apt-get install -y bc build-essential libelf-dev libssl-dev flex bison clang llvm lld
 
-      - name: Prepare Kernel Headers
+      - name: Inject Module into Kernel Tree
         run: |
-          cd kernel-source
-          # We must pass LLVM=1 to tell the Makefile to use Clang instead of GCC
-          make ARCH=arm64 LLVM=1 blossom_defconfig
-          make ARCH=arm64 LLVM=1 scripts prepare
-
-      - name: Compile Sashimi Module
-        run: |
-          cd kernel-source
-          # We force the compiler to include module.h during the modpost stage
-          # and point to the absolute path of the kernel headers
-          export KCFLAGS="-I$(pwd)/arch/arm64/include -I$(pwd)/include -include $(pwd)/include/linux/module.h"
+          # 1. Copy your C file directly into the kernel's misc drivers folder
+          cp sashimi-module/sashimi_test.c kernel-source/drivers/misc/
           
-          make ARCH=arm64 LLVM=1 KCFLAGS="$KCFLAGS" M=$(realpath ../sashimi-module) modules
+          # 2. Append our module to the kernel's official Makefile
+          echo 'obj-m += sashimi_test.o' >> kernel-source/drivers/misc/Makefile
 
+      - name: Compile Kernel Modules
+        run: |
+          cd kernel-source
+          make ARCH=arm64 LLVM=1 blossom_defconfig
+          
+          # 3. Build modules natively. No M= flag, no lost headers!
+          # -j$(nproc) makes it use all CPU cores so it builds extremely fast
+          make ARCH=arm64 LLVM=1 modules -j$(nproc)
 
       - name: Upload Kernel Module (.ko)
         uses: actions/upload-artifact@v4
         with:
           name: sashimi_test_ko
-          path: sashimi-module/*.ko
+          # 4. Pull the finished artifact right out of the kernel tree
+          path: kernel-source/drivers/misc/sashimi_test.ko
