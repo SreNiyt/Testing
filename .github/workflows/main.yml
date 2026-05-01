@@ -1,9 +1,12 @@
-name: Build Sashimi Test Module
-on: [push, workflow_dispatch]
+name: Build Sashimi Out-of-Tree Module
+on: 
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows you to run this manually
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04-arm # Fast native ARM runners
     steps:
       - name: Checkout Module Code
         uses: actions/checkout@v4
@@ -16,7 +19,7 @@ jobs:
           repository: zyexro/sashimi_kernel_xiaomi_blossom
           path: kernel-source
 
-      - name: Install Dependencies
+      - name: Install Build Essentials
         run: |
           sudo apt-get update
           sudo apt-get install -y bc build-essential libelf-dev libssl-dev flex bison gcc-aarch64-linux-gnu
@@ -24,16 +27,17 @@ jobs:
       - name: Prepare Kernel Headers
         run: |
           cd kernel-source
-          # Use your specific defconfig
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- dandelion_defconfig
+          # Using the correct MT6765 config for the Blossom/Dandelion hardware
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- mt6765_defconfig
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-      - name: Build Module
+      - name: Compile Sashimi Module
         run: |
           cd sashimi-module
+          # KDIR points to the kernel-source we just prepared
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KDIR=$GITHUB_WORKSPACE/kernel-source
-
-      - name: Upload Artifact
+          
+      - name: Upload Kernel Module (.ko)
         uses: actions/upload-artifact@v4
         with:
           name: sashimi_test_ko
