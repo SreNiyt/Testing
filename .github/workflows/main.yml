@@ -1,4 +1,4 @@
-name: Build Sashimi Out-of-Tree Module
+name: Build Sashimi Test Module
 on: [push, workflow_dispatch]
 
 jobs:
@@ -8,31 +8,33 @@ jobs:
       - name: Checkout Module Code
         uses: actions/checkout@v4
         with:
-          path: module-source
+          path: sashimi-module
 
       - name: Checkout Sashimi Kernel Source
         uses: actions/checkout@v4
         with:
-          repository: YOUR_USERNAME/YOUR_KERNEL_REPO
+          repository: zyexro/sashimi_kernel_xiaomi_blossom
           path: kernel-source
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Build Essentials
-        run: sudo apt-get update && sudo apt-get install -y bc build-essential libelf-dev libssl-dev flex bison
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc build-essential libelf-dev libssl-dev flex bison gcc-aarch64-linux-gnu
 
       - name: Prepare Kernel Headers
         run: |
           cd kernel-source
-          make ARCH=arm64 dandelion_defconfig
-          make ARCH=arm64 modules_prepare
+          # Use your specific defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- dandelion_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-      - name: Compile Module
+      - name: Build Module
         run: |
-          cd module-source
+          cd sashimi-module
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KDIR=$GITHUB_WORKSPACE/kernel-source
-          
-      - name: Upload .ko
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sashimi-test-ko
-          path: module-source/sashimi_test.ko
+          name: sashimi_test_ko
+          path: sashimi-module/*.ko
