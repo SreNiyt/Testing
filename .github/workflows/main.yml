@@ -35,9 +35,12 @@ jobs:
       - name: Compile Sashimi Module
         run: |
           cd kernel-source
-          # We run make FROM the kernel source to ensure all headers are visible
-          # We use absolute paths to prevent "file not found" errors
-          make ARCH=arm64 LLVM=1 -C $(pwd) M=$(realpath ../sashimi-module) modules
+          # We force the compiler to include module.h during the modpost stage
+          # and point to the absolute path of the kernel headers
+          export KCFLAGS="-I$(pwd)/arch/arm64/include -I$(pwd)/include -include $(pwd)/include/linux/module.h"
+          
+          make ARCH=arm64 LLVM=1 KCFLAGS="$KCFLAGS" M=$(realpath ../sashimi-module) modules
+
 
       - name: Upload Kernel Module (.ko)
         uses: actions/upload-artifact@v4
