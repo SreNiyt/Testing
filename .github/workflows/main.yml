@@ -34,9 +34,11 @@ jobs:
 
       - name: Compile Sashimi Module
         run: |
-          cd sashimi-module
-          # Again, LLVM=1 is the key here
-          make ARCH=arm64 LLVM=1 KDIR=$GITHUB_WORKSPACE/kernel-source
+          cd kernel-source
+          # We run the command FROM the kernel directory 
+          # and point M to the external module folder
+          make ARCH=arm64 LLVM=1 M=$GITHUB_WORKSPACE/sashimi-module modules
+
 
           
       - name: Upload Kernel Module (.ko)
