@@ -22,23 +22,22 @@ jobs:
       - name: Install Build Essentials
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc build-essential libelf-dev libssl-dev flex bison gcc-aarch64-linux-gnu
+          # Install Clang and LLVM alongside the standard tools
+          sudo apt-get install -y bc build-essential libelf-dev libssl-dev flex bison clang llvm lld
 
       - name: Prepare Kernel Headers
         run: |
           cd kernel-source
-          # We already know it's blossom_defconfig now
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- blossom_defconfig
-          
-          # Replace modules_prepare with 'scripts' and 'prepare'
-          # This builds the internal tools needed for external modules
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- scripts prepare
-
+          # We must pass LLVM=1 to tell the Makefile to use Clang instead of GCC
+          make ARCH=arm64 LLVM=1 blossom_defconfig
+          make ARCH=arm64 LLVM=1 scripts prepare
 
       - name: Compile Sashimi Module
         run: |
           cd sashimi-module
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KDIR=$GITHUB_WORKSPACE/kernel-source
+          # Again, LLVM=1 is the key here
+          make ARCH=arm64 LLVM=1 KDIR=$GITHUB_WORKSPACE/kernel-source
+
           
       - name: Upload Kernel Module (.ko)
         uses: actions/upload-artifact@v4
