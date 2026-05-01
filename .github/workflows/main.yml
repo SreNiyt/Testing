@@ -1,12 +1,12 @@
-name: Build Sashimi Out-of-Tree Module
+name: Build Sash Out-of-Tree Module
 on: 
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Allows you to run this manually
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm # Fast native ARM runners
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Module Code
         uses: actions/checkout@v4
@@ -27,14 +27,24 @@ jobs:
       - name: Prepare Kernel Headers
         run: |
           cd kernel-source
-          # Using the correct MT6765 config for the Blossom/Dandelion hardware
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- mt6765_defconfig
+          # Many MTK trees use the 'vendor' prefix for the defconfig
+          # We check for blossom_defconfig or mt6765_defconfig
+          if [ -f arch/arm64/configs/vendor/blossom_defconfig ]; then
+            CONF=vendor/blossom_defconfig
+          elif [ -f arch/arm64/configs/blossom_defconfig ]; then
+            CONF=blossom_defconfig
+          else
+            # Fallback to the chipset generic
+            CONF=mt6765_defconfig
+          fi
+          
+          echo "Using Config: $CONF"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- $CONF
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
       - name: Compile Sashimi Module
         run: |
           cd sashimi-module
-          # KDIR points to the kernel-source we just prepared
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KDIR=$GITHUB_WORKSPACE/kernel-source
           
       - name: Upload Kernel Module (.ko)
